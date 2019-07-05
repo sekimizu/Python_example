@@ -73,7 +73,7 @@ class UI:
 # ==================================================================================================   
 
 if __name__ == '__main__':
-    argu = {'hasText' : False, 'mText' : 'Hello Welcome!', 'hasImg' : True, 'mImgSrc' : 'HDD_LED.png', 'mBtnOk' : 'OK', 'mBtnCancel' : 'CANCEL', 'mTitle' : 'Hi'}
+    argu = {'hasText' : False, 'mText' : 'Hello Welcome!', 'hasImg' : True, 'mImgSrc' : 'gundam.png', 'mBtnOk' : 'OK', 'mBtnCancel' : 'CANCEL', 'mTitle' : 'Hi'}
     mUI = UI(argu)
     mUI.onRender()
     
