@@ -7,14 +7,28 @@ FileStamp = 1
 FuncStamp = 1
 LineStamp = 1
 
-# Set logger level
-m_log.setLogger(Disable, TimeStamp, FileStamp, FuncStamp, LineStamp)
+# Get config parser
+config_parser = items.getConfigParser()
+
+# Set logger output directory
+logDirectory = config_parser.getValue('LogFile', 'Directory')
+m_log.setDirectory(logDirectory)
+
+# Set logger output file
+logFilename = config_parser.getValue('LogFile', 'LogName')
+m_log.setLogFilename(logFilename)
+
+# Set logger flag
+options = ['Disable', 'TimeStamp', 'FileStamp', 'FuncStamp', 'LineStamp']
+config_settings = config_parser.getValues('LogFile', options)
+m_log.setLogger(config_settings)
 
 # Write message into buffer
 m_log.writeBuffer(OUTPUT_MSG)
 
 # Dump debug message
 m_log.printLog()
+
 """
 import os
 import platform
@@ -23,16 +37,25 @@ import inspect
 import getpass
 
 class logger():
-    def __init__(self):
+    def __init__(self, default_dir = ".", default_file = "log"):
         self.record = []
+        self.directory, self.log_filename = default_dir, default_file
         self.disable, self.timeStamp, self.fileStamp, self.funcStamp, self.lineStamp, = 1, 0, 0, 0, 0
         
+    def setDirectory(self, directory_name):
+        self.directory = directory_name
+        if not os.path.exists(directory_name):
+            os.makedirs(directory_name)
+
+    def setLogFilename(self, logfile_name):
+        self.log_filename = logfile_name
+
     def getLogger(self):
         return self.record
     
-    def setLogger(self, _disable, _timeStamp, _fileStamp, _funcStamp, _lineStamp):
+    def setLogger(self, opts):
         try:
-            self.disable, self.timeStamp, self.fileStamp, self.funcStamp, self.lineStamp = _disable, _timeStamp, _fileStamp, _funcStamp, _lineStamp
+            self.disable, self.timeStamp, self.fileStamp, self.funcStamp, self.lineStamp = int(opts[0]), int(opts[1]), int(opts[2]), int(opts[3]), int(opts[4])
             userName, osName, platformSystem, platformRelease = getpass.getuser(), os.name, platform.system(), platform.release()
 
             #print("Disable", str(_disable), "Time", str(_timeStamp), "File", str(_fileStamp), "Func", str(_funcStamp), "Line", str(_lineStamp))
@@ -43,9 +66,9 @@ class logger():
         
     def writeBuffer(self, msg):
         output = []
+        # do not write log is disabled
         if self.disable is 1:
             return
-
         # add time stamp
         if self.timeStamp is 1:
             output.append(self.getTime())
@@ -59,12 +82,12 @@ class logger():
         # add function name stamp
         if self.funcStamp is 1:
             output.append(inspect.stack()[1].function)
-
+        # add debug msg
         output.append(msg)
+        # write whole data into record
         self.record.append(output)
 
     def printLog(self):
-        #print("logger >>> Current buffer size", len(self.record))
         for line in self.record:
             print(line)
 
@@ -73,137 +96,9 @@ class logger():
             self.record.pop()   
     
     def reportGen(self):
-        print("logger >>> Write log into file...")
+        with open(self.directory + "/" + self.log_filename, 'a') as f:
+            for line in self.record:
+                f.write("%s\n" % str(line))
 
-        
     def getTime(self):
         return str(datetime.datetime.now())
-
-"""
-
-class log:
-    def __init__(self):
-        self.debug = True
-        self.tc = name()
-			
-    def createDir(self):
-        if not os.path.exists('DebugLog'):
-            os.makedirs('DebugLog')
-		
-    def writeInfoToLog(self, mode, infoStr):    #arg1-> 0: no space, 1: 4 space, arg2-> string
-        self.createDir()
-        fPath = os.path.abspath('.')
-        fLogName = self.getIniData('LogFile', 'LogName')
-        fStrComb = fPath + '\\DebugLog\\' + fLogName
-        f = open(fStrComb, 'a+')
-        if mode == 1:
-            f.write('    ' + infoStr + '\n')
-        else:
-            f.write(infoStr + '\n')
-        f.close()
-		
-        if self.debug == True:
-            print(infoStr)
-
-    def getIniData(self, mainStr, subStr):
-        #parser = configparser.ConfigParser()
-        parser = MyConfigParser()
-        parser.read('settings/config.ini')
-        return parser.get(mainStr, subStr)
-		
-    def setIniData(self, mainStr, subStr, sData):
-        #parser = configparser.ConfigParser()
-        parser = MyConfigParser()
-        parser.read('settings/config.ini')
-        parser[mainStr][subStr] = sData 
-        with open('config.ini', 'w') as configfile:
-            parser.write(configfile)
-		
-    def writeReport(self, infoStr):
-        self.createDir()
-        fPath = os.path.abspath('.')
-        fLogName = self.getIniData('Report', 'PartNumber')
-        fStrComb = fPath + '\\DebugLog\\' + fLogName[9:] + '.txt'
-        f = open(fStrComb, 'a+')
-        f.write(infoStr + '\n')
-        f.close()
-		
-    def getTcSum(self):
-        parser = configparser.ConfigParser()
-        parser.read('settings/config.ini')
-        sum = 0
-        while True:
-            try:
-                subStr = 'TC' + str(sum)
-                res = parser.get('Report', subStr)
-                sum += 1
-            except:
-                return sum
-				
-    def casesLog(self,mode, tcIndex, result):
-        caseName = self.tc.getTcName(tcIndex)
-        if mode == 0:
-            self.writeInfoToLog(0,caseName)
-        else:
-            if result == 1:
-                self.writeInfoToLog(1,caseName + 'cSuccessful')
-            else:
-                self.writeInfoToLog(1,caseName + 'cFail')
-				
-    def setTcResult(self,tcIndex,res):
-        sCase = 'TC' + str(tcIndex)
-        try:
-            self.setIniData("Report", sCase, str(res))
-        except:
-            print("error ...!")
-			
-    def getTcResult(self,tcIndex):
-        sCase = 'TC' + str(tcIndex)
-        res = self.getIniData("Report", sCase)
-        return res
-
-# ==================================================================================================
-class name:
-    def __init__(self):
-        pass
-
-    def getTcName(self,tcIndex):
-        index = str(tcIndex)
-        if index == '0':
-            res = 'acPowerON(0)'
-        elif index == '1':
-            res = 'acPowerON(1)'
-        elif index == '2':
-            res = 'reportTask()'
-        elif index == '3':
-            res = 'execCmd_COM()'
-        elif index == '4':
-            res = 'openCOM()'
-        elif index == '5':
-            res = 'BMCLogin()'
-        elif index == '6':
-            res = 'flashBMCMacTask()'
-        elif index == '7':
-            res = 'flashMAC3()'
-        elif index == '8':
-            res = 'systemPowerON()'
-        elif index == '9':
-            res = 'BMCToSysPort()'
-        elif index == '10':
-            res = 'systemLogin()'
-        elif index == '11':
-            res = 'chkDeviceStatus()'
-        elif index == '12':
-            res = 'chkDeviceStatus()'
-        elif index == '13':
-            res = 'sysPowerOFF_intoBMC()'
-        elif index == '14':
-            res = 'confirmSysPowerOFF()'
-        elif index == '15':
-            res = 'BMCRestart()'
-        else:
-            res = 'Reserved ...'
-			
-        return res
-
-"""
